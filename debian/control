@@ -5,8 +5,7 @@ Maintainer: popye <sailor3101@gmail.com>
 Build-Depends: cmake (>= 2.8),
                debhelper (>= 9),
                valac (>= 0.26),
-               libgranite-dev,
-               libgala-dev
+               libgranite-dev
 Standards-Version: 3.9.3
 
 Package: gala-eos-window-switcher
