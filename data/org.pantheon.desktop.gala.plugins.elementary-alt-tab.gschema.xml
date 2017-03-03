@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+
+  <schema path="/org/pantheon/desktop/gala/plugins/elementary-alt-tab/" id="org.pantheon.desktop.gala.plugins.elementary-alt-tab" gettext-domain="gala">
+		<key type="b" name="all-workspaces">
+			<default>false</default>
+			<summary>Show windows from all workspaces</summary>
+			<description>If enabled, windows from all workspaces will be displayed in the alt-tab-switcher. Otherwise, only windows from the current workspace will be shown.</description>
+		</key>
+		<key type="b" name="animate">
+			<default>true</default>
+			<summary>Animate the open and start of the switcher</summary>
+			<description>Fade the switcher in and out and animate its depth when it is opened and closed.</description>
+		</key>
+		<key type="b" name="always-on-primary-monitor">
+			<default>false</default>
+			<summary>Always place the switcher on the primary monitor</summary>
+			<description>When enabled the switcher will always appear on the primary monitor. Otherwise it will be placed on the current monitor, that is, the monitor with the cursor on it.</description>
+		</key>
+		<key type="i" name="icon-size">
+			<range min="16" max="1024"/>
+			<default>64</default>
+			<summary>The size of the icons</summary>
+			<description>The size at which the icons in the switcher should be displayed.</description>
+		</key>
+        <key type="s" name="font-name">
+            <default>'Roboto Mono'</default>
+            <summary>Switcher font name</summary>
+            <description>Name of the default font used by switcher</description>
+        </key>
+        <key type="s" name="font-color">
+            <default>'#ffffff'</default>
+            <summary>Switcher font color</summary>
+            <description>Color in format '#RRGGBBAA'</description>
+        </key>
+        <key type="s" name="wrapper-background-color">
+            <default>'#00000035'</default>
+            <summary>wrapper_background_color</summary>
+            <description>Color in format '#RRGGBBAA'</description>
+        </key>
+        <key type="i" name="wrapper-round-radius">
+            <range min="0" max="512"/>
+            <default>16</default>
+            <summary>wrapper_round_radius</summary>
+            <description>default=16</description>
+        </key>
+        <key type="i" name="wrapper-stroke-width">
+            <range min="0" max="96"/>
+            <default>2</default>
+            <summary>wrapper_stroke_width</summary>
+            <description>default=2</description>
+        </key>
+        <key type="s" name="wrapper-stroke-color">
+            <default>'#0000003F'</default>
+            <summary>wrapper_stroke_color</summary>
+            <description>Color in format '#RRGGBBAA'</description>
+        </key>
+        <key type="s" name="indicator-background-color">
+            <default>'#FFFFFF90'</default>
+            <summary>indicator_background_color</summary>
+            <description>Color in format '#RRGGBBAA'</description>
+        </key>
+        <key type="i" name="indicator-round-radius">
+            <range min="0" max="512"/>
+            <default>8</default>
+            <summary>indicator_round_radius</summary>
+            <description>default=8</description>
+        </key>
+        <key type="i" name="indicator-stroke-width">
+            <range min="0" max="96"/>
+            <default>0</default>
+            <summary>indicator_stroke_width</summary>
+            <description>default=0</description>
+        </key>
+        <key type="s" name="indicator-stroke-color">
+            <default>'#FFFFFF7F'</default>
+            <summary>indicator_stroke_color</summary>
+            <description>Color in format '#RRGGBBAA'</description>
+        </key>
+
+	</schema>
+</schemalist>
