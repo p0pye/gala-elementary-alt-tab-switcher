@@ -1,0 +1,13 @@
+Source: gala-eos-window-switcher
+Section: x11
+Priority: extra
+Maintainer: popye <sailor3101@gmail.com>
+Build-Depends: cmake (>= 2.8),
+               debhelper (>= 9),
+               valac (>= 0.24)
+Standards-Version: 3.9.3
+
+Package: gala-eos-window-switcher
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Gala Window Switcher For elementaryOS
