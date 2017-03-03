@@ -14,7 +14,7 @@ ensure_vala_version ("0.22" MINIMUM)
 include (ValaPrecompile)
 
 find_package (PkgConfig)
-pkg_check_modules(DEPS REQUIRED gala granite)
+pkg_check_modules(DEPS REQUIRED granite)
 add_definitions (${DEPS_CFLAGS})
 link_directories (${DEPS_LIBRARY_DIRS})
 
