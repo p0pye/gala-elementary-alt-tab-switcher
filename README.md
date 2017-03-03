@@ -15,10 +15,15 @@ $ cmake -DCMAKE_INSTALL_PREFIX=/usr ..
 $ make
 $ sudo make install
 ```
-after installing you need re-login or replace gala instance with command:
+After installing you need re-login or replace gala instance with command:
 ```bash
 $ gala --replace
 ```
+Switcher's settings location:
+```bash
+/org/pantheon/desktop/gala/plugins/elementary-alt-tab/
+```
+
 ## Known issues
 
 1. Switcher do no close correctly for backwar switching (alt+shift+tab), if you using
