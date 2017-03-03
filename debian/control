@@ -6,6 +6,7 @@ Build-Depends: cmake (>= 2.8),
                debhelper (>= 9),
                valac (>= 0.26),
                libgranite-dev,
+               libgala0,
                libgala-dev
 Standards-Version: 3.9.3
 
