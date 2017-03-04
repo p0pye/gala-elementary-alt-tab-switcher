@@ -8,6 +8,7 @@ This is a fork of "Gala Window Manager Alternative Window Switcher" project:
 
 ## Install
 
+build from sources:
 ```bash
 $ mkdir build
 $ cd build
@@ -15,6 +16,13 @@ $ cmake -DCMAKE_INSTALL_PREFIX=/usr ..
 $ make
 $ sudo make install
 ```
+or via ppa:
+```bash
+$ sudo add-apt-repository ppa:popye/eos-window-switcher
+$ sudo apt-get update
+$ sudo apt-get install gala-eos-window-switcher
+```
+
 After installing you need re-login or replace gala instance with command:
 ```bash
 $ gala --replace
