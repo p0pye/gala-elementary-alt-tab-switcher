@@ -25,14 +25,15 @@ namespace Gala.Plugins.ElementaryAltTab
 {
 	public delegate void ObjectCallback (Object object);
 
+	public const string SWITCHER_PLUGIN_VERSION="0.1.2";
+
 	class Settings : Granite.Services.Settings
 	{
 		public bool all_workspaces { get; set; default = false; }
 		public bool animate { get; set; default = true; }
 		public bool always_on_primary_monitor { get; set; default = false; }
-		public int icon_size { get; set; default = 64; }
-		public string font_name { get; set; default = "Roboto Mono"; }
-		public string font_color { get; set; default = "#ffffff"; }
+		public int icon_size { get; set; default = 80; }
+		public int icon_opacity { get; set; default = 200; }
 
 		public string wrapper_background_color { get; set; default = "#00000035"; }
 		public int wrapper_round_radius { get; set; default = 16; }
@@ -43,6 +44,15 @@ namespace Gala.Plugins.ElementaryAltTab
 		public int indicator_round_radius { get; set; default=8; }
 		public int indicator_stroke_width { get; set; default = 0; }
 		public string indicator_stroke_color { get; set; default = "#FFFFFF7F"; }
+
+		public bool caption_visible { get; set; default = true; }
+		public string caption_background_color { get; set; default = "#00000090"; }
+		public int caption_round_radius { get; set; default = 12; }
+		public int caption_stroke_width { get; set; default = 0; }
+		public string caption_stroke_color { get; set; default = "#0000005F"; }
+		public string caption_font_name { get; set; default = "Open Sans Bold"; }
+		public int caption_font_size { get; set; default = 10; }
+		public string caption_font_color { get; set; default = "#FFFFFF"; }
 
 		static Settings? instance = null;
 
@@ -62,11 +72,11 @@ namespace Gala.Plugins.ElementaryAltTab
 
 	public class Main : Gala.Plugin
 	{
-		const int SPACING = 12;
-		const int SPACING_VERT = 4;
-		const int PADDING = 24;
+		const int SPACING = 4;
+		const int PADDING = 28;
 		const int MIN_OFFSET = 64;
-		const int INDICATOR_BORDER = 6;
+		const int INDICATOR_BORDER = 2;
+		const int FIX_TIMEOUT_INTERVAL = 100;
 		const double ANIMATE_SCALE = 0.8;
 
 
@@ -77,7 +87,7 @@ namespace Gala.Plugins.ElementaryAltTab
 		Actor container;
 		RoundedActor wrapper;
 		RoundedActor indicator;
-		Text app_caption;
+		RoundedText caption;
 
 		int modifier_mask;
 
@@ -115,14 +125,18 @@ namespace Gala.Plugins.ElementaryAltTab
 
 			indicator.margin_left = indicator.margin_top =
 				indicator.margin_right = indicator.margin_bottom = 0;
-			indicator.set_easing_duration (200);
+			indicator.set_easing_duration (settings.animate ? 200 : 0);
 			indicator.set_pivot_point (0.5f, 0.5f);
 
-			/*app_caption = new Text.full (settings.font_name, "Some window name here!", Color.from_string (settings.font_color));
-			app_caption.background_color = { 0, 0, 0, 150 };*/
+			caption = new RoundedText (Color.from_string (settings.caption_background_color), settings.caption_round_radius,
+				settings.caption_stroke_width, Color.from_string (settings.caption_stroke_color),
+				"%s %d".printf (settings.caption_font_name, settings.caption_font_size),
+				"  ", Color.from_string (settings.caption_font_color), container);
+			caption.set_pivot_point (0.5f, 0.5f);
 
 			wrapper.add_child (indicator);
 			wrapper.add_child (container);
+			wrapper.add_child (caption);
 		}
 
 		bool container_motion_event (MotionEvent event)
@@ -131,8 +145,12 @@ namespace Gala.Plugins.ElementaryAltTab
 			if (selected == null)
 				return true;
 
-			current = selected;
-			update_indicator_position ();
+			if (current != selected) {
+				if (Settings.get_default ().animate)
+					icon_fade (current, false);
+				current = selected;
+				update_indicator_position ();
+			}
 			return true;
 		}
 
@@ -148,7 +166,7 @@ namespace Gala.Plugins.ElementaryAltTab
 			wrapper.destroy ();
 			container.destroy ();
 			indicator.destroy ();
-			app_caption.destroy ();
+			caption.destroy ();
 
 			if (wm == null)
 				return;
@@ -208,6 +226,8 @@ namespace Gala.Plugins.ElementaryAltTab
 				var icon = new WindowIcon (window, settings.icon_size);
 				if (window == current_window)
 					current = icon;
+				else if (settings.animate)
+					icon.opacity = settings.icon_opacity;
 
 				container.add_child (icon);
 			}
@@ -217,6 +237,16 @@ namespace Gala.Plugins.ElementaryAltTab
 		{
 			if (container.get_n_children () == 0) {
 				return;
+			} else if (container.get_n_children () == 1) {
+				if (current == null)
+					return;
+
+				var window = current.window;
+				var workspace = wm.get_screen ().get_active_workspace ();
+
+				if (!window.minimized && workspace == window.get_workspace ()) {
+					return;
+				}
 			}
 
 			if (opened)
@@ -226,13 +256,31 @@ namespace Gala.Plugins.ElementaryAltTab
 			var settings = Settings.get_default ();
 
 			//renew settings for actors
-			wrapper.renew_settings (Color.from_string (settings.wrapper_background_color),
-				settings.wrapper_round_radius, settings.wrapper_stroke_width, Color.from_string (settings.wrapper_stroke_color));
-			indicator.renew_settings(Color.from_string (settings.indicator_background_color), settings.indicator_round_radius,
-				settings.indicator_stroke_width, Color.from_string (settings.indicator_stroke_color));
+			wrapper.renew_settings (
+				Color.from_string (settings.wrapper_background_color),
+				settings.wrapper_round_radius,
+				settings.wrapper_stroke_width,
+				Color.from_string (settings.wrapper_stroke_color)
+			);
+
+			indicator.renew_settings(
+				Color.from_string (settings.indicator_background_color),
+				settings.indicator_round_radius,
+				settings.indicator_stroke_width,
+				Color.from_string (settings.indicator_stroke_color)
+			);
+			caption.renew_settings (
+				Color.from_string (settings.caption_background_color),
+				settings.caption_round_radius,
+				settings.caption_stroke_width,
+				Color.from_string (settings.caption_stroke_color),
+				"%s %d".printf (settings.caption_font_name, settings.caption_font_size),
+				Color.from_string (settings.caption_font_color)
+			);
 
 			indicator.visible = false;
 			indicator.resize (settings.icon_size + INDICATOR_BORDER * 2, settings.icon_size + INDICATOR_BORDER * 2);
+			caption.visible = false;
 
 			if (settings.animate) {
 				wrapper.opacity = 0;
@@ -244,20 +292,26 @@ namespace Gala.Plugins.ElementaryAltTab
 			var geom = screen.get_monitor_geometry (monitor);
 
 			float container_width;
-			container.get_preferred_width (settings.icon_size + PADDING * 2, null, out container_width);
+			container.get_preferred_width (settings.icon_size +
+				container.margin_left + container.margin_right, null, out container_width);
 			if (container_width + MIN_OFFSET * 2 > geom.width)
 				container.width = geom.width - MIN_OFFSET * 2;
 
 			float nat_width, nat_height;
-			if (container.get_n_children () == 1)
-				container.get_preferred_size (out nat_width, null, null, null);
-			else
-				container.get_preferred_size (null, null, out nat_width, null);
+			container.get_preferred_size (null, null, out nat_width, null);
 
-			container.get_preferred_size (null, out nat_height, null, null);
-			wrapper.resize ((int) nat_width, (int) nat_height);
+			if (container.get_n_children () == 1)
+				nat_width -= SPACING;
+
+			container.get_preferred_size (null, null, null, out nat_height);
+
+			wrapper.resize ((int) nat_width, (int) ((nat_height) +
+				(settings.caption_visible ?
+					(caption.height - (container.margin_bottom - caption.height))/2
+					: 0)) );
+
 			wrapper.set_position (geom.x + (geom.width - wrapper.width) / 2,
-			                      geom.y + (geom.height - wrapper.height) / 2);
+		                      	geom.y + (geom.height - wrapper.height) / 2);
 
 			wm.ui_group.insert_child_above (wrapper, null);
 
@@ -332,9 +386,51 @@ namespace Gala.Plugins.ElementaryAltTab
 					actor = container.get_child_at_index (container.get_n_children () - 1);
 			}
 
+			if (Settings.get_default ().animate)
+				icon_fade (current, false);
 			current = (WindowIcon) actor;
 
 			update_indicator_position ();
+		}
+
+		void update_caption_text (bool initial = false) {
+
+			var settings = Settings.get_default ();
+
+			// FIXME: width contains incorrect value, if we have one children in container
+			if (container.get_n_children () == 1 && container.width > settings.icon_size + SPACING) {
+				GLib.Timeout.add (FIX_TIMEOUT_INTERVAL, () => {
+					update_caption_text (initial);
+					return false;
+				}, GLib.Priority.DEFAULT);
+				return;
+			}
+
+			if (initial) {
+				caption.set_text ("");
+				caption.set_position (0,
+					container.y + container.height + INDICATOR_BORDER * 2);
+				caption.visible = true;
+				caption.save_easing_state ();
+				caption.set_easing_duration (0);
+				caption.restore_easing_state ();
+			}
+
+			if (settings.animate) {
+				caption.save_easing_state ();
+				caption.set_easing_duration (100);
+		        caption.restore_easing_state ();
+			}
+	        caption.set_text (current.window.get_title ());
+
+			if (settings.animate) {
+	        	caption.save_easing_state ();
+				caption.set_easing_duration (100);
+				caption.x = wrapper.width/2 - caption.width/2;
+	        	caption.restore_easing_state ();
+			} else {
+				caption.x = wrapper.width/2 - caption.width/2;
+			}
 		}
 
 		void update_indicator_position (bool initial = false)
@@ -345,15 +441,23 @@ namespace Gala.Plugins.ElementaryAltTab
 			if (container.get_n_children () > 1
 				&& container.get_child_at_index (1).allocation.x1 < 1) {
 
-				Idle.add (() => {
+				GLib.Timeout.add (FIX_TIMEOUT_INTERVAL, () => {
 					update_indicator_position (initial);
 					return false;
-				});
+				}, GLib.Priority.DEFAULT);
+
+				/*Idle.add (() => {
+					update_indicator_position (initial);
+					return false;
+				});*/
 				return;
 			}
 
 			float x, y;
 			current.allocation.get_origin (out x, out y);
+
+			if (current.opacity == Settings.get_default ().icon_opacity)
+				icon_fade (current);
 
 			if (initial) {
 				indicator.visible = true;
@@ -361,11 +465,29 @@ namespace Gala.Plugins.ElementaryAltTab
 				indicator.set_easing_duration (0);
 			}
 
-			indicator.x = container.margin_left + x - INDICATOR_BORDER;
+			indicator.x = container.margin_left +
+			(container.get_n_children () > 1 ? x : 0) - INDICATOR_BORDER;
 			indicator.y = container.margin_top + y - INDICATOR_BORDER;
 
 			if (initial)
 				indicator.restore_easing_state ();
+
+			if (Settings.get_default ().caption_visible)
+				update_caption_text (initial);
+		}
+
+		private void icon_fade (Actor act, bool _in=true) {
+			if (_in){
+				act.save_easing_state ();
+				act.set_easing_duration (200);
+				act.opacity = 255;
+				act.restore_easing_state ();
+			} else {
+				act.save_easing_state ();
+				act.set_easing_duration (200);
+				act.opacity = Settings.get_default ().icon_opacity;
+				act.restore_easing_state ();
+			}
 		}
 
 		bool key_relase_event (KeyEvent event)
@@ -406,7 +528,7 @@ namespace Gala.Plugins.ElementaryAltTab
 public Gala.PluginInfo register_plugin ()
 {
 	return Gala.PluginInfo () {
-		name = "Elementary Alt Tab",
+		name = "Elementary Alt Tab ver." + Gala.Plugins.ElementaryAltTab.SWITCHER_PLUGIN_VERSION,
 		author = "Gala Developers, Popye",
 		plugin_type = typeof (Gala.Plugins.ElementaryAltTab.Main),
 		provides = Gala.PluginFunction.WINDOW_SWITCHER,

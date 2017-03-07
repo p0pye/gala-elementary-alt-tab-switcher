@@ -18,7 +18,8 @@
 using Clutter;
 namespace Gala.Plugins.ElementaryAltTab
 {
-    class RoundedActor : Actor {
+    class RoundedActor : Actor
+    {
         private Canvas canvas;
         private Color back_color;
         private int rect_radius;
@@ -26,7 +27,8 @@ namespace Gala.Plugins.ElementaryAltTab
         private Color stroke_color;
 
         public RoundedActor (Color background_color, int radius,
-                                int stroke_width, Color stroke_color) {
+                                int stroke_width, Color stroke_color)
+        {
             rect_radius = radius;
             back_color = background_color;
             this.stroke_width = stroke_width % 2 == 0 ? stroke_width : stroke_width + 1;
@@ -36,7 +38,8 @@ namespace Gala.Plugins.ElementaryAltTab
             canvas.draw.connect (this.drawit);
         }
 
-        private bool drawit ( Cairo.Context ctx) {
+        protected virtual bool drawit ( Cairo.Context ctx)
+        {
             Granite.Drawing.BufferSurface buffer;
             buffer = new Granite.Drawing.BufferSurface ((int)this.width, (int)this.height);
 
@@ -54,7 +57,8 @@ namespace Gala.Plugins.ElementaryAltTab
             buffer.context.fill ();
 
             //draw stroke if we need
-            if (stroke_width > 1) {
+            if (stroke_width > 1)
+            {
                 cairo_set_source_color (buffer.context, stroke_color);
                 Granite.Drawing.Utilities.cairo_rounded_rectangle (buffer.context,
                     stroke_width/2, stroke_width/2,
@@ -76,14 +80,16 @@ namespace Gala.Plugins.ElementaryAltTab
             return true;
         }
 
-        public void resize (int width, int height) {
+        public void resize (int width, int height)
+        {
             set_size (width, height);
             canvas.set_size (width, height);
             canvas.invalidate ();
         }
 
         public void renew_settings (Color background_color, int radius,
-                                int stroke_width, Color stroke_color) {
+                                int stroke_width, Color stroke_color)
+        {
             rect_radius = radius;
             back_color = background_color;
             this.stroke_width = stroke_width % 2 == 0 ? stroke_width : stroke_width + 1;
