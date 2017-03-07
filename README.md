@@ -5,7 +5,7 @@ This is a fork of "Gala Window Manager Alternative Window Switcher" project:
 <br>https://github.com/tom95/gala-alternate-alt-tab
 
 <p align='center'>
-![Preview](preview.png)
+    <img src='preview.png'>
 </p>
 
 ## Install
@@ -34,7 +34,7 @@ Switcher's settings location:
 /org/pantheon/desktop/gala/plugins/elementary-alt-tab/
 ```
 <p align='center'>
-    ![Demo](demo.gif)
+    <img src='demo.gif'>
 </p>
 
 ## Known issues
