@@ -25,11 +25,7 @@ $ sudo apt-get update
 $ sudo apt-get install gala-eos-window-switcher
 ```
 
-After installing you need re-login or replace gala instance with command:
-```bash
-$ gala --replace
-```
-Switcher's settings location:
+Switcher settings location:
 ```bash
 /org/pantheon/desktop/gala/plugins/elementary-alt-tab/
 ```
