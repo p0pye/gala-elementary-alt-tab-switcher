@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-
   <schema path="/org/pantheon/desktop/gala/plugins/elementary-alt-tab/" id="org.pantheon.desktop.gala.plugins.elementary-alt-tab" gettext-domain="gala">
 		<key type="b" name="all-workspaces">
 			<default>false</default>
@@ -23,16 +22,12 @@
 			<summary>The size of the icons</summary>
 			<description>The size at which the icons in the switcher should be displayed.</description>
 		</key>
-        <key type="s" name="font-name">
-            <default>'Roboto Mono'</default>
-            <summary>Switcher font name</summary>
-            <description>Name of the default font used by switcher</description>
-        </key>
-        <key type="s" name="font-color">
-            <default>'#ffffff'</default>
-            <summary>Switcher font color</summary>
-            <description>Color in format '#RRGGBBAA'</description>
-        </key>
+        <key type="i" name="icon-opacity">
+			<range min="1" max="255"/>
+			<default>200</default>
+			<summary>The opacity of the icons</summary>
+			<description>The opacity at which the icons in the switcher should be displayed.</description>
+		</key>
         <key type="s" name="wrapper-background-color">
             <default>'#00000035'</default>
             <summary>wrapper_background_color</summary>
@@ -75,6 +70,49 @@
         <key type="s" name="indicator-stroke-color">
             <default>'#FFFFFF7F'</default>
             <summary>indicator_stroke_color</summary>
+            <description>Color in format '#RRGGBBAA'</description>
+        </key>
+        <key type="b" name="caption-visible">
+			<default>true</default>
+			<summary>window_caption_visible</summary>
+			<description>Default=true</description>
+		</key>
+        <key type="s" name="caption-background-color">
+            <default>'#00000090'</default>
+            <summary>window_caption_background_color</summary>
+            <description>Color in format '#RRGGBBAA'</description>
+        </key>
+        <key type="i" name="caption-round-radius">
+            <range min="0" max="512"/>
+            <default>12</default>
+            <summary>window_caption_round_radius</summary>
+            <description>default=12</description>
+        </key>
+        <key type="i" name="caption-stroke-width">
+            <range min="0" max="96"/>
+            <default>0</default>
+            <summary>window_caption_stroke_width</summary>
+            <description>default=0</description>
+        </key>
+        <key type="s" name="caption-stroke-color">
+            <default>'#0000005F'</default>
+            <summary>window_caption_stroke_color</summary>
+            <description>default='#0000005F'</description>
+        </key>
+        <key type="s" name="caption-font-name">
+            <default>'Open Sans Bold'</default>
+            <summary>Window caption font name</summary>
+            <description>Name of the default font used by caption</description>
+        </key>
+        <key type="i" name="caption-font-size">
+            <range min="1" max="64"/>
+            <default>10</default>
+            <summary>window_caption_font_size</summary>
+            <description>default=10</description>
+        </key>
+        <key type="s" name="caption-font-color">
+            <default>'#FFFFFF'</default>
+            <summary>Window caption font color</summary>
             <description>Color in format '#RRGGBBAA'</description>
         </key>
 
