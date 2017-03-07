@@ -4,7 +4,9 @@ This is an alternative to the stock libplank window switcher.
 This is a fork of "Gala Window Manager Alternative Window Switcher" project:
 <br>https://github.com/tom95/gala-alternate-alt-tab
 
+<p align='center'>
 ![Preview](preview.png)
+</p>
 
 ## Install
 
@@ -31,6 +33,9 @@ Switcher's settings location:
 ```bash
 /org/pantheon/desktop/gala/plugins/elementary-alt-tab/
 ```
+<p align='center'>
+    ![Demo](demo.gif)
+</p>
 
 ## Known issues
 
