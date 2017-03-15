@@ -20,8 +20,11 @@ link_directories (${DEPS_LIBRARY_DIRS})
 
 vala_precompile(VALA_C
 	src/Main.vala
-	src/RoundedActor.vala
-	src/RoundedText.vala
+	src/Widgets/RoundedActor.vala
+	src/Widgets/RoundedText.vala
+	src/Widgets/WindowPreviewActor.vala
+	src/Settings.vala
+
 PACKAGES
 	gala
 	granite

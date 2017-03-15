@@ -11,14 +11,24 @@
 			<summary>Animate the open and start of the switcher</summary>
 			<description>Fade the switcher in and out and animate its depth when it is opened and closed.</description>
 		</key>
-		<key type="b" name="always-on-primary-monitor">
-			<default>false</default>
-			<summary>Always place the switcher on the primary monitor</summary>
-			<description>When enabled the switcher will always appear on the primary monitor. Otherwise it will be placed on the current monitor, that is, the monitor with the cursor on it.</description>
+        <key type="b" name="always-on-primary-monitor">
+            <default>false</default>
+            <summary>Always place the switcher on the primary monitor</summary>
+            <description>When enabled the switcher will always appear on the primary monitor. Otherwise it will be placed on the current monitor, that is, the monitor with the cursor on it.</description>
+        </key>
+        <key type="b" name="desktop-in-switcher">
+			<default>true</default>
+			<summary>desktop_in_switcher</summary>
+			<description>desktop_in_switcher</description>
+		</key>
+        <key type="b" name="desktop-icon-in-switcher">
+			<default>true</default>
+			<summary>desktop_icon_in_switcher</summary>
+			<description>desktop_icon_in_switcher</description>
 		</key>
 		<key type="i" name="icon-size">
 			<range min="16" max="1024"/>
-			<default>64</default>
+			<default>80</default>
 			<summary>The size of the icons</summary>
 			<description>The size at which the icons in the switcher should be displayed.</description>
 		</key>
@@ -50,6 +60,18 @@
             <summary>wrapper_stroke_color</summary>
             <description>Color in format '#RRGGBBAA'</description>
         </key>
+        <key type="i" name="wrapper-padding">
+            <range min="0" max="96"/>
+            <default>28</default>
+            <summary>wrapper_padding</summary>
+            <description>default=28</description>
+        </key>
+        <key type="i" name="wrapper-spacing">
+            <range min="0" max="96"/>
+            <default>8</default>
+            <summary>wrapper_spacing</summary>
+            <description>default=8</description>
+        </key>
         <key type="s" name="indicator-background-color">
             <default>'#FFFFFF90'</default>
             <summary>indicator_background_color</summary>
@@ -71,6 +93,12 @@
             <default>'#FFFFFF7F'</default>
             <summary>indicator_stroke_color</summary>
             <description>Color in format '#RRGGBBAA'</description>
+        </key>
+        <key type="i" name="indicator-border">
+            <range min="0" max="96"/>
+            <default>4</default>
+            <summary>indicator_border</summary>
+            <description>default=4</description>
         </key>
         <key type="b" name="caption-visible">
 			<default>true</default>
@@ -115,6 +143,39 @@
             <summary>Window caption font color</summary>
             <description>Color in format '#RRGGBBAA'</description>
         </key>
-
+        <key type="i" name="caption-top-magrin">
+            <range min="0" max="96"/>
+            <default>2</default>
+            <summary>caption_top_magrin</summary>
+            <description>default=2</description>
+        </key>
+        <key type="b" name="preview-in-switcher">
+			<default>false</default>
+			<summary>preview_in_switcher</summary>
+			<description>Default=false</description>
+		</key>
+        <key type="i" name="preview-width">
+            <range min="16" max="1920"/>
+            <default>200</default>
+            <summary>preview_width</summary>
+            <description>default=200</description>
+        </key>
+        <key type="i" name="preview-height">
+            <range min="16" max="1920"/>
+            <default>150</default>
+            <summary>preview_height</summary>
+            <description>default=150</description>
+        </key>
+        <key type="b" name="preview-show-icon">
+			<default>true</default>
+			<summary>preview_show_icon</summary>
+			<description>Default=true</description>
+		</key>
+        <key type="i" name="preview-icon-size">
+            <range min="16" max="1024"/>
+            <default>64</default>
+            <summary>preview_icon_size</summary>
+            <description>default=64</description>
+        </key>
 	</schema>
 </schemalist>

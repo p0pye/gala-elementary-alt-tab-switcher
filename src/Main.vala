@@ -27,58 +27,12 @@ namespace Gala.Plugins.ElementaryAltTab
 
 	public const string SWITCHER_PLUGIN_VERSION="0.1.2";
 
-	class Settings : Granite.Services.Settings
-	{
-		public bool all_workspaces { get; set; default = false; }
-		public bool animate { get; set; default = true; }
-		public bool always_on_primary_monitor { get; set; default = false; }
-		public int icon_size { get; set; default = 80; }
-		public int icon_opacity { get; set; default = 200; }
-
-		public string wrapper_background_color { get; set; default = "#00000035"; }
-		public int wrapper_round_radius { get; set; default = 16; }
-		public int wrapper_stroke_width { get; set; default = 2; }
-		public string wrapper_stroke_color { get; set; default = "#0000003F"; }
-
-		public string indicator_background_color { get; set; default="#FFFFFF90"; }
-		public int indicator_round_radius { get; set; default=8; }
-		public int indicator_stroke_width { get; set; default = 0; }
-		public string indicator_stroke_color { get; set; default = "#FFFFFF7F"; }
-
-		public bool caption_visible { get; set; default = true; }
-		public string caption_background_color { get; set; default = "#00000090"; }
-		public int caption_round_radius { get; set; default = 12; }
-		public int caption_stroke_width { get; set; default = 0; }
-		public string caption_stroke_color { get; set; default = "#0000005F"; }
-		public string caption_font_name { get; set; default = "Open Sans Bold"; }
-		public int caption_font_size { get; set; default = 10; }
-		public string caption_font_color { get; set; default = "#FFFFFF"; }
-
-		static Settings? instance = null;
-
-		private Settings ()
-		{
-			base ("org.pantheon.desktop.gala.plugins.elementary-alt-tab");
-		}
-
-		public static Settings get_default ()
-		{
-			if (instance == null)
-				instance = new Settings ();
-
-			return instance;
-		}
-	}
-
 	public class Main : Gala.Plugin
 	{
-		const int SPACING = 4;
-		const int PADDING = 28;
 		const int MIN_OFFSET = 64;
-		const int INDICATOR_BORDER = 2;
 		const int FIX_TIMEOUT_INTERVAL = 100;
 		const double ANIMATE_SCALE = 0.8;
-
+		const string DESKTOP_NAME = "Desktop";
 
 		public bool opened { get; private set; default = false; }
 
@@ -91,7 +45,9 @@ namespace Gala.Plugins.ElementaryAltTab
 
 		int modifier_mask;
 
-		WindowIcon? current = null;
+		WindowIcon? cur_icon = null;
+		WindowPreviewActor? cur_wpa = null;
+		DesktopPreviewActor cur_desktop = null;
 
 		public override void initialize (Gala.WindowManager wm)
 		{
@@ -104,19 +60,17 @@ namespace Gala.Plugins.ElementaryAltTab
 			KeyBinding.set_custom_handler ("switch-windows-backward", (Meta.KeyHandlerFunc) handle_switch_windows);
 
 			var layout = new FlowLayout (FlowOrientation.HORIZONTAL);
-			layout.column_spacing = layout.row_spacing = SPACING;
 
 			wrapper = new RoundedActor (Color.from_string (settings.wrapper_background_color),
 				settings.wrapper_round_radius, settings.wrapper_stroke_width, Color.from_string (settings.wrapper_stroke_color));
 			wrapper.reactive = true;
 			wrapper.set_pivot_point (0.5f, 0.5f);
-			wrapper.key_release_event.connect (key_relase_event);
+			wrapper.key_release_event.connect (key_release_event);
+			wrapper.key_focus_out.connect (key_focus_out);
 
 			container = new Actor ();
 			container.layout_manager = layout;
 			container.reactive = true;
-			container.margin_left = container.margin_top =
-				container.margin_right = container.margin_bottom = PADDING;
 			container.button_press_event.connect (container_mouse_press);
 			container.motion_event.connect (container_motion_event);
 
@@ -125,7 +79,6 @@ namespace Gala.Plugins.ElementaryAltTab
 
 			indicator.margin_left = indicator.margin_top =
 				indicator.margin_right = indicator.margin_bottom = 0;
-			indicator.set_easing_duration (settings.animate ? 200 : 0);
 			indicator.set_pivot_point (0.5f, 0.5f);
 
 			caption = new RoundedText (Color.from_string (settings.caption_background_color), settings.caption_round_radius,
@@ -137,28 +90,6 @@ namespace Gala.Plugins.ElementaryAltTab
 			wrapper.add_child (indicator);
 			wrapper.add_child (container);
 			wrapper.add_child (caption);
-		}
-
-		bool container_motion_event (MotionEvent event)
-		{
-			var selected = event.stage.get_actor_at_pos (PickMode.ALL, (int) event.x, (int) event.y) as WindowIcon;
-			if (selected == null)
-				return true;
-
-			if (current != selected) {
-				if (Settings.get_default ().animate)
-					icon_fade (current, false);
-				current = selected;
-				update_indicator_position ();
-			}
-			return true;
-		}
-
-		bool container_mouse_press (ButtonEvent event)
-		{
-			if (opened && event.button == Gdk.BUTTON_PRIMARY)
-				close_switcher (event.time);
-			return true;
 		}
 
 		public override void destroy ()
@@ -198,8 +129,18 @@ namespace Gala.Plugins.ElementaryAltTab
 
 			if (!opened) {
 				collect_windows (display, workspace);
-				open_switcher ();
-				update_indicator_position (true);
+
+				//FIXME: showing animation not work correctly for preview_in_switcher
+				if (settings.preview_in_switcher)
+					GLib.Timeout.add (0, () => {
+						open_switcher ();
+						update_indicator_position (true);
+						return false;
+					});
+				else {
+					open_switcher ();
+					update_indicator_position (true);
+				}
 			}
 
 			var binding_name = binding.get_name ();
@@ -207,7 +148,7 @@ namespace Gala.Plugins.ElementaryAltTab
 
 			// FIXME for unknown reasons, switch-applications-backward won't be emitted, so we
 			//       test manually if shift is held down
-			/*backward = false;
+			/*
 			backward = binding_name == "switch-applications-backward";
 			//	&& (get_current_modifiers () & ModifierType.SHIFT_MASK) != 0;*/
 			next_window (display, workspace, backward);
@@ -222,26 +163,51 @@ namespace Gala.Plugins.ElementaryAltTab
 
 			container.width = -1;
 			container.destroy_all_children ();
-			foreach (var window in windows) {
-				var icon = new WindowIcon (window, settings.icon_size);
-				if (window == current_window)
-					current = icon;
-				else if (settings.animate)
-					icon.opacity = settings.icon_opacity;
 
-				container.add_child (icon);
+			foreach (var window in windows) {
+
+				if (!settings.preview_in_switcher) {
+					var icon = new WindowIcon (window, settings.icon_size);
+					if (window == current_window)
+						cur_icon = icon;
+					else if (settings.animate)
+						icon.opacity = settings.icon_opacity;
+					container.add_child (icon);
+				} else {
+					var wpa = new WindowPreviewActor (window, settings.preview_width,
+						settings.preview_height, settings.preview_show_icon, settings.preview_icon_size);
+					container.add_child (wpa);
+					if (window == current_window)
+						cur_wpa = wpa;
+					else if (settings.animate)
+						wpa.opacity = settings.icon_opacity;
+				}
+			}
+
+			if (settings.desktop_in_switcher) {
+				DesktopPreviewActor dpa;
+				if (settings.preview_in_switcher)
+					dpa = new DesktopPreviewActor (true, settings.preview_width,
+						settings.preview_height, settings.desktop_icon_in_switcher, settings.preview_icon_size);
+				else
+					dpa = new DesktopPreviewActor (false, 0, 0, true, settings.icon_size);
+				if (settings.animate)
+					dpa.opacity = settings.icon_opacity;
+				container.add_child (dpa);
 			}
 		}
 
 		void open_switcher ()
 		{
+			var settings = Settings.get_default ();
+
 			if (container.get_n_children () == 0) {
 				return;
 			} else if (container.get_n_children () == 1) {
-				if (current == null)
+				if ((cur_icon == null && cur_wpa == null) || settings.desktop_in_switcher)
 					return;
 
-				var window = current.window;
+				var window = (settings.preview_in_switcher ? cur_wpa.window : cur_icon.window);
 				var workspace = wm.get_screen ().get_active_workspace ();
 
 				if (!window.minimized && workspace == window.get_workspace ()) {
@@ -253,7 +219,6 @@ namespace Gala.Plugins.ElementaryAltTab
 				return;
 
 			var screen = wm.get_screen ();
-			var settings = Settings.get_default ();
 
 			//renew settings for actors
 			wrapper.renew_settings (
@@ -269,6 +234,14 @@ namespace Gala.Plugins.ElementaryAltTab
 				settings.indicator_stroke_width,
 				Color.from_string (settings.indicator_stroke_color)
 			);
+			indicator.set_easing_duration (settings.animate ? 200 : 0);
+
+			container.margin_left = container.margin_top =
+				container.margin_right = container.margin_bottom = settings.wrapper_padding;
+
+			var l = container.layout_manager as FlowLayout;
+			l.column_spacing = l.row_spacing = settings.wrapper_spacing;
+
 			caption.renew_settings (
 				Color.from_string (settings.caption_background_color),
 				settings.caption_round_radius,
@@ -279,7 +252,12 @@ namespace Gala.Plugins.ElementaryAltTab
 			);
 
 			indicator.visible = false;
-			indicator.resize (settings.icon_size + INDICATOR_BORDER * 2, settings.icon_size + INDICATOR_BORDER * 2);
+			if (settings.preview_in_switcher)
+				indicator.resize (settings.preview_width + settings.indicator_border * 2,
+					settings.preview_height + settings.indicator_border * 2);
+			else
+				indicator.resize (settings.icon_size + settings.indicator_border * 2,
+					settings.icon_size + settings.indicator_border * 2);
 			caption.visible = false;
 
 			if (settings.animate) {
@@ -301,7 +279,7 @@ namespace Gala.Plugins.ElementaryAltTab
 			container.get_preferred_size (null, null, out nat_width, null);
 
 			if (container.get_n_children () == 1)
-				nat_width -= SPACING;
+				nat_width -= settings.wrapper_spacing;
 
 			container.get_preferred_size (null, null, null, out nat_height);
 
@@ -316,7 +294,7 @@ namespace Gala.Plugins.ElementaryAltTab
 			wm.ui_group.insert_child_above (wrapper, null);
 
 			wrapper.save_easing_state ();
-			wrapper.set_easing_duration (100);
+			wrapper.set_easing_duration (200);
 			wrapper.set_scale (1, 1);
 			wrapper.opacity = 255;
 			wrapper.restore_easing_state ();
@@ -344,7 +322,9 @@ namespace Gala.Plugins.ElementaryAltTab
 				wm.ui_group.remove_child (wrapper);
 			};
 
-			if (Settings.get_default ().animate) {
+			var settings = Settings.get_default ();
+
+			if (settings.animate) {
 				wrapper.save_easing_state ();
 				wrapper.set_easing_duration (100);
 				wrapper.set_scale (ANIMATE_SCALE, ANIMATE_SCALE);
@@ -361,34 +341,53 @@ namespace Gala.Plugins.ElementaryAltTab
 				remove_actor (this);
 			}
 
-			if (current.window == null) {
-				return;
-			}
+			if (settings.desktop_in_switcher && cur_desktop != null) {
+				//show desktop
+				show_desktop (wm.get_screen ().get_active_workspace ());
+			} else {
+				var window = (settings.preview_in_switcher ? cur_wpa.window : cur_icon.window);
 
-			var window = current.window;
-			var workspace = window.get_workspace ();
-			if (workspace != wm.get_screen ().get_active_workspace ())
-				workspace.activate_with_focus (window, time);
-			else
-				window.activate (time);
+				if (window == null) {
+					return;
+				}
+
+				var workspace = window.get_workspace ();
+				if (workspace != wm.get_screen ().get_active_workspace ())
+					workspace.activate_with_focus (window, time);
+				else
+					window.activate (time);
+			}
 		}
 
 		void next_window (Display display, Workspace? workspace, bool backward)
 		{
 			Actor actor;
+			Actor current;
+			var settings = Settings.get_default ();
+			if (settings.desktop_in_switcher && cur_desktop != null)
+				current = cur_desktop;
+			else (settings.preview_in_switcher ? current = cur_wpa : current = cur_icon);
 			if (!backward) {
 				actor = current.get_next_sibling ();
 				if (actor == null)
-					actor = container.get_child_at_index (0);
+					actor = container.get_first_child ();
 			} else {
 				actor = current.get_previous_sibling ();
 				if (actor == null)
-					actor = container.get_child_at_index (container.get_n_children () - 1);
+					actor = container.get_last_child ();
 			}
 
-			if (Settings.get_default ().animate)
+			if (settings.animate && current != actor)
 				icon_fade (current, false);
-			current = (WindowIcon) actor;
+
+			if (settings.desktop_in_switcher && (actor as DesktopPreviewActor) != null)
+				cur_desktop = (DesktopPreviewActor) actor;
+			else {
+				cur_desktop = null;
+				if (settings.preview_in_switcher)
+					cur_wpa = (WindowPreviewActor) actor;
+				else cur_icon = (WindowIcon) actor;
+			}
 
 			update_indicator_position ();
 		}
@@ -398,7 +397,8 @@ namespace Gala.Plugins.ElementaryAltTab
 			var settings = Settings.get_default ();
 
 			// FIXME: width contains incorrect value, if we have one children in container
-			if (container.get_n_children () == 1 && container.width > settings.icon_size + SPACING) {
+			if (container.get_n_children () == 1 && container.width >
+				(settings.preview_in_switcher ? settings.preview_width : settings.icon_size) + settings.wrapper_spacing) {
 				GLib.Timeout.add (FIX_TIMEOUT_INTERVAL, () => {
 					update_caption_text (initial);
 					return false;
@@ -406,26 +406,40 @@ namespace Gala.Plugins.ElementaryAltTab
 				return;
 			}
 
+			var current_window = (settings.preview_in_switcher ? cur_wpa.window : cur_icon.window);
 			if (initial) {
-				caption.set_text ("");
-				caption.set_position (0,
-					container.y + container.height + INDICATOR_BORDER * 2);
+				if (cur_desktop != null && settings.desktop_in_switcher)
+					caption.set_text (DESKTOP_NAME);
+				else
+					caption.set_text (current_window.get_title ());
+				caption.set_position (wrapper.width/2 - caption.width/2,
+					container.y + container.height + settings.indicator_border +
+						settings.caption_top_magrin);
 				caption.visible = true;
+				if (settings.animate)
+					caption.opacity = 100;
 				caption.save_easing_state ();
-				caption.set_easing_duration (0);
+				caption.set_easing_duration (200);
+				caption.opacity = 255;
 				caption.restore_easing_state ();
 			}
 
 			if (settings.animate) {
 				caption.save_easing_state ();
-				caption.set_easing_duration (100);
+				caption.set_easing_mode (AnimationMode.EASE_OUT_QUINT);
+				caption.set_easing_duration (300);
 		        caption.restore_easing_state ();
 			}
-	        caption.set_text (current.window.get_title ());
+
+			if (cur_desktop != null && settings.desktop_in_switcher)
+				caption.set_text (DESKTOP_NAME);
+			else
+	        	caption.set_text (current_window.get_title ());
 
 			if (settings.animate) {
 	        	caption.save_easing_state ();
-				caption.set_easing_duration (100);
+				caption.set_easing_mode (AnimationMode.EASE_OUT_QUINT);
+				caption.set_easing_duration (300);
 				caption.x = wrapper.width/2 - caption.width/2;
 	        	caption.restore_easing_state ();
 			} else {
@@ -454,9 +468,25 @@ namespace Gala.Plugins.ElementaryAltTab
 			}
 
 			float x, y;
-			current.allocation.get_origin (out x, out y);
+			Actor current;
+			var settings = Settings.get_default ();
+			if (settings.desktop_in_switcher && cur_desktop != null) {
+				cur_desktop.allocation.get_origin (out x, out y);
+				current = cur_desktop;
+			}
+			else if (settings.preview_in_switcher) {
+				cur_wpa.allocation.get_origin (out x, out y);
+				current = cur_wpa;
+			}
+			else {
+				cur_icon.allocation.get_origin (out x, out y);
+				current = cur_icon;
+			}
 
-			if (current.opacity == Settings.get_default ().icon_opacity)
+			if (current == null)
+				return;
+
+			if (settings.icon_opacity == current.opacity)
 				icon_fade (current);
 
 			if (initial) {
@@ -466,17 +496,30 @@ namespace Gala.Plugins.ElementaryAltTab
 			}
 
 			indicator.x = container.margin_left +
-			(container.get_n_children () > 1 ? x : 0) - INDICATOR_BORDER;
-			indicator.y = container.margin_top + y - INDICATOR_BORDER;
+			(container.get_n_children () > 1 ? x : 0) - settings.indicator_border;
+			indicator.y = container.margin_top + y - settings.indicator_border;
 
 			if (initial)
 				indicator.restore_easing_state ();
 
-			if (Settings.get_default ().caption_visible)
+			if (settings.caption_visible)
 				update_caption_text (initial);
 		}
 
-		private void icon_fade (Actor act, bool _in=true) {
+		private void close_window ()
+		{
+			var current_window = (Settings.get_default ().preview_in_switcher ? cur_wpa.window : cur_icon.window);
+			if (current_window == null)
+				return;
+			var screen = current_window.get_screen ();
+			current_window.@delete (screen.get_display ().get_current_time ());
+			//collect_windows ();
+		}
+
+		private void icon_fade (Actor act, bool _in=true)
+		{
+			if (act == null)
+				return;
 			if (_in){
 				act.save_easing_state ();
 				act.set_easing_duration (200);
@@ -490,7 +533,119 @@ namespace Gala.Plugins.ElementaryAltTab
 			}
 		}
 
-		bool key_relase_event (KeyEvent event)
+		/*
+		*	copied from deepin utils
+		*/
+		public static void show_desktop (Meta.Workspace workspace)
+		{
+			// FIXME: this is a temporary solution, should send _NET_SHOWING_DESKTOP instead, but
+			// mutter could not dispatch it correctly for issue
+
+			var screen = workspace.get_screen ();
+			var display = screen.get_display ();
+			var windows = display.get_tab_list (Meta.TabList.NORMAL, workspace);
+
+			foreach (var w in windows) {
+				w.minimize ();
+			}
+		}
+
+		void key_focus_out ()
+		{
+			if (opened) {
+				//FIXME: problem if layout swicher across witch window switcher shorcut
+				close_switcher (wm.get_screen ().get_display ().get_current_time ());
+			}
+		}
+
+		bool container_motion_event (MotionEvent event)
+		{
+			var actor = event.stage.get_actor_at_pos (PickMode.ALL, (int) event.x, (int) event.y);
+			if (actor == null)
+				return true;
+			var settings = Settings.get_default ();
+
+			if (settings.desktop_in_switcher) {
+				var selected_desktop = actor as DesktopPreviewActor;
+				if (selected_desktop == null)
+					selected_desktop = actor.get_parent ().get_parent () as DesktopPreviewActor;
+				if (selected_desktop == null && settings.preview_in_switcher && (actor as DesktopIcon) != null)
+					selected_desktop = actor.get_parent () as DesktopPreviewActor;
+				if (selected_desktop != null) {
+					if (cur_desktop != null)
+						return true;
+					cur_desktop = selected_desktop;
+					if (settings.animate) {
+						//FIXME
+						if (cur_icon != null)
+							icon_fade (cur_icon, false);
+
+						if (cur_wpa != null)
+							icon_fade (cur_wpa, false);
+					}
+					update_indicator_position ();
+					return true;
+				}
+			}
+
+			if (settings.preview_in_switcher) {
+				var selected = actor as WindowPreviewActor;
+				if (selected == null) {
+					// FIXME: nested actors do not track parent motion signal
+					if ((actor as WindowIcon) != null )
+						selected = actor.get_parent () as WindowPreviewActor;
+					else if ((actor.get_first_child () as Clone) != null)
+						selected = actor.get_parent () as WindowPreviewActor;
+				}
+
+				if (selected == null)
+					return true;
+
+				if (cur_wpa != selected || cur_desktop != null) {
+					if (cur_desktop != null) {
+						if (settings.animate)
+							icon_fade (cur_desktop, false);
+						cur_desktop = null;
+					}
+
+					if (settings.animate)
+						icon_fade (cur_wpa, false);
+					cur_wpa = selected;
+					update_indicator_position ();
+				}
+			} else {
+				var selected = actor as WindowIcon;
+				if (selected == null)
+					return true;
+
+				if (cur_icon != selected || cur_desktop != null) {
+					if (cur_desktop != null) {
+						if (settings.animate)
+							icon_fade (cur_desktop, false);
+						cur_desktop = null;
+					}
+
+					if (settings.animate)
+						icon_fade (cur_icon, false);
+					cur_icon = selected;
+					update_indicator_position ();
+				}
+			}
+
+			return true;
+		}
+
+		bool container_mouse_press (ButtonEvent event)
+		{
+			if (opened && event.button == Gdk.BUTTON_PRIMARY)
+				close_switcher (event.time);
+			//else if (opened && event.button == Gdk.BUTTON_MIDDLE)
+				//close_window ();
+
+			return true;
+		}
+
+		bool key_release_event (KeyEvent event)
 		{
 			if ((get_current_modifiers () & modifier_mask) == 0) {
 				close_switcher (event.time);
@@ -518,9 +673,16 @@ namespace Gala.Plugins.ElementaryAltTab
 
 		bool keybinding_filter (KeyBinding binding)
 		{
-			// don't block any keybinding for the time being
-			// return true for any keybinding that should be handled here.
-			return false;
+			// if it's not built-in, we can block it right away
+			if (!binding.is_builtin ())
+				return true;
+
+			// otherwise we determine by name if it's meant for us
+			var name = binding.get_name ();
+
+
+			return !(name == "switch-applications" || name == "switch-applications-backward"
+				|| name == "switch-windows" || name == "switch-windows-backward");
 		}
 	}
 }
