@@ -25,7 +25,7 @@ namespace Gala.Plugins.ElementaryAltTab
 {
 	public delegate void ObjectCallback (Object object);
 
-	public const string SWITCHER_PLUGIN_VERSION="0.1.2";
+	public const string SWITCHER_PLUGIN_VERSION="0.1.3";
 
 	public class Main : Gala.Plugin
 	{
