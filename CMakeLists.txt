@@ -14,8 +14,9 @@ ensure_vala_version ("0.22" MINIMUM)
 include (ValaPrecompile)
 
 find_package (PkgConfig)
-pkg_check_modules(DEPS REQUIRED gala granite)
+pkg_check_modules(DEPS REQUIRED gala granite libwnck-3.0)
 add_definitions (${DEPS_CFLAGS})
+add_definitions(-DWNCK_I_KNOW_THIS_IS_UNSTABLE)
 link_directories (${DEPS_LIBRARY_DIRS})
 
 vala_precompile(VALA_C
@@ -24,11 +25,13 @@ vala_precompile(VALA_C
 	src/Widgets/RoundedText.vala
 	src/Widgets/WindowPreviewActor.vala
 	src/Settings.vala
+	src/Utils.vala
 
 PACKAGES
 	gala
 	granite
 	xfixes-4.0
+	libwnck-3.0
 OPTIONS
 	--vapidir=${CMAKE_CURRENT_SOURCE_DIR}/vapi
 )

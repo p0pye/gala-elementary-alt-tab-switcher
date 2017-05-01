@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
+
+    <enum id="org.gala.plugins.elementary-alt-tab.valign">
+        <value nick="top" value='0'/>
+        <value nick="bottom" value='1'/>
+    </enum>
+    <enum id="org.gala.plugins.elementary-alt-tab.halign">
+        <value nick="left" value='0'/>
+        <value nick="right" value='1'/>
+        <value nick="center" value='2'/>
+    </enum>
+
   <schema path="/org/pantheon/desktop/gala/plugins/elementary-alt-tab/" id="org.pantheon.desktop.gala.plugins.elementary-alt-tab" gettext-domain="gala">
 		<key type="b" name="all-workspaces">
 			<default>false</default>
@@ -26,6 +37,23 @@
 			<summary>desktop_icon_in_switcher</summary>
 			<description>desktop_icon_in_switcher</description>
 		</key>
+        <key type="s" name="desktop-display-name">
+            <default>'Desktop'</default>
+            <summary>desktop_display_name</summary>
+            <description>desktop_display_name</description>
+        </key>
+        <key type="d" name="inactive-element-scale">
+            <default>0.8</default>
+            <range min="0.1" max="1.0"/>
+            <summary>inactive_element_scale</summary>
+            <description>inactive_element_scale</description>
+        </key>
+        <key type="d" name="active-element-scale">
+            <default>1.0</default>
+            <range min="0.1" max="1.0"/>
+            <summary>active_element_scale</summary>
+            <description>active_element_scale</description>
+        </key>
 		<key type="i" name="icon-size">
 			<range min="16" max="1024"/>
 			<default>80</default>
@@ -34,7 +62,7 @@
 		</key>
         <key type="i" name="icon-opacity">
 			<range min="1" max="255"/>
-			<default>200</default>
+			<default>220</default>
 			<summary>The opacity of the icons</summary>
 			<description>The opacity at which the icons in the switcher should be displayed.</description>
 		</key>
@@ -176,6 +204,16 @@
             <default>64</default>
             <summary>preview_icon_size</summary>
             <description>default=64</description>
+        </key>
+        <key name='preview-icon-halign' enum='org.gala.plugins.elementary-alt-tab.halign'>
+            <default>'center'</default>
+            <summary>preview_icon_halign</summary>
+            <description></description>
+        </key>
+        <key name='preview-icon-valign' enum='org.gala.plugins.elementary-alt-tab.valign'>
+            <default>'bottom'</default>
+            <summary>preview_icon_valign</summary>
+            <description></description>
         </key>
 	</schema>
 </schemalist>

@@ -25,14 +25,13 @@ namespace Gala.Plugins.ElementaryAltTab
 {
 	public delegate void ObjectCallback (Object object);
 
-	public const string SWITCHER_PLUGIN_VERSION="0.1.3";
+	public const string SWITCHER_PLUGIN_VERSION="0.2";
 
 	public class Main : Gala.Plugin
 	{
 		const int MIN_OFFSET = 64;
 		const int FIX_TIMEOUT_INTERVAL = 100;
 		const double ANIMATE_SCALE = 0.8;
-		const string DESKTOP_NAME = "Desktop";
 
 		public bool opened { get; private set; default = false; }
 
@@ -47,7 +46,7 @@ namespace Gala.Plugins.ElementaryAltTab
 
 		WindowIcon? cur_icon = null;
 		WindowPreviewActor? cur_wpa = null;
-		DesktopPreviewActor cur_desktop = null;
+		DesktopPreviewActor? cur_desktop = null;
 
 		public override void initialize (Gala.WindowManager wm)
 		{
@@ -164,6 +163,9 @@ namespace Gala.Plugins.ElementaryAltTab
 			container.width = -1;
 			container.destroy_all_children ();
 
+			//update wnck
+			Wnck.Screen.get_default ().force_update ();
+
 			foreach (var window in windows) {
 
 				if (!settings.preview_in_switcher) {
@@ -172,28 +174,33 @@ namespace Gala.Plugins.ElementaryAltTab
 						cur_icon = icon;
 					else if (settings.animate)
 						icon.opacity = settings.icon_opacity;
+					icon.set_pivot_point (0.5f, 0.5f);
+		            icon.set_easing_duration (200);
 					container.add_child (icon);
+
+					if (settings.animate)
+						icon.set_scale (settings.inactive_element_scale, settings.inactive_element_scale);
 				} else {
-					var wpa = new WindowPreviewActor (window, settings.preview_width,
-						settings.preview_height, settings.preview_show_icon, settings.preview_icon_size);
+					var wpa = new WindowPreviewActor (window);
 					container.add_child (wpa);
 					if (window == current_window)
 						cur_wpa = wpa;
 					else if (settings.animate)
 						wpa.opacity = settings.icon_opacity;
+
+					if (settings.animate)
+					wpa.set_scale (settings.inactive_element_scale, settings.inactive_element_scale);
 				}
 			}
 
 			if (settings.desktop_in_switcher) {
-				DesktopPreviewActor dpa;
-				if (settings.preview_in_switcher)
-					dpa = new DesktopPreviewActor (true, settings.preview_width,
-						settings.preview_height, settings.desktop_icon_in_switcher, settings.preview_icon_size);
-				else
-					dpa = new DesktopPreviewActor (false, 0, 0, true, settings.icon_size);
+				DesktopPreviewActor dpa = new DesktopPreviewActor ();
 				if (settings.animate)
 					dpa.opacity = settings.icon_opacity;
 				container.add_child (dpa);
+
+				if (settings.animate)
+					dpa.set_scale (settings.inactive_element_scale, settings.inactive_element_scale);
 			}
 		}
 
@@ -342,8 +349,7 @@ namespace Gala.Plugins.ElementaryAltTab
 			}
 
 			if (settings.desktop_in_switcher && cur_desktop != null) {
-				//show desktop
-				show_desktop (wm.get_screen ().get_active_workspace ());
+				Utils.show_desktop (wm.get_screen ().get_active_workspace ());
 			} else {
 				var window = (settings.preview_in_switcher ? cur_wpa.window : cur_icon.window);
 
@@ -361,8 +367,7 @@ namespace Gala.Plugins.ElementaryAltTab
 
 		void next_window (Display display, Workspace? workspace, bool backward)
 		{
-			Actor actor;
-			Actor current;
+			Actor actor, current;
 			var settings = Settings.get_default ();
 			if (settings.desktop_in_switcher && cur_desktop != null)
 				current = cur_desktop;
@@ -377,8 +382,10 @@ namespace Gala.Plugins.ElementaryAltTab
 					actor = container.get_last_child ();
 			}
 
-			if (settings.animate && current != actor)
-				icon_fade (current, false);
+			if (settings.animate && current != actor) {
+				Utils.icon_fade (current, false);
+				current.set_scale (settings.inactive_element_scale, settings.inactive_element_scale);
+			}
 
 			if (settings.desktop_in_switcher && (actor as DesktopPreviewActor) != null)
 				cur_desktop = (DesktopPreviewActor) actor;
@@ -407,11 +414,17 @@ namespace Gala.Plugins.ElementaryAltTab
 			}
 
 			var current_window = (settings.preview_in_switcher ? cur_wpa.window : cur_icon.window);
+			var current_caption = "n/a";
+			if (cur_desktop != null && settings.desktop_in_switcher) {
+				current_caption = settings.desktop_display_name;
+			} else if (current_window != null) {
+				ulong xid = (ulong) current_window.get_xwindow ();
+				var wnck_current_window = Wnck.Window.get (xid);
+				current_caption = wnck_current_window.get_name ();
+			}
+
 			if (initial) {
-				if (cur_desktop != null && settings.desktop_in_switcher)
-					caption.set_text (DESKTOP_NAME);
-				else
-					caption.set_text (current_window.get_title ());
+				caption.set_text (current_caption);
 				caption.set_position (wrapper.width/2 - caption.width/2,
 					container.y + container.height + settings.indicator_border +
 						settings.caption_top_magrin);
@@ -431,10 +444,7 @@ namespace Gala.Plugins.ElementaryAltTab
 		        caption.restore_easing_state ();
 			}
 
-			if (cur_desktop != null && settings.desktop_in_switcher)
-				caption.set_text (DESKTOP_NAME);
-			else
-	        	caption.set_text (current_window.get_title ());
+        	caption.set_text (current_caption);
 
 			if (settings.animate) {
 	        	caption.save_easing_state ();
@@ -468,26 +478,25 @@ namespace Gala.Plugins.ElementaryAltTab
 			}
 
 			float x, y;
-			Actor current;
 			var settings = Settings.get_default ();
 			if (settings.desktop_in_switcher && cur_desktop != null) {
 				cur_desktop.allocation.get_origin (out x, out y);
-				current = cur_desktop;
+				if (settings.icon_opacity == cur_desktop.opacity)
+					Utils.icon_fade (cur_desktop);
+				cur_desktop.set_scale (settings.active_element_scale, settings.active_element_scale);
 			}
 			else if (settings.preview_in_switcher) {
 				cur_wpa.allocation.get_origin (out x, out y);
-				current = cur_wpa;
+				if (settings.icon_opacity == cur_wpa.opacity)
+					Utils.icon_fade (cur_wpa);
+				cur_wpa.set_scale (settings.active_element_scale, settings.active_element_scale);
 			}
 			else {
 				cur_icon.allocation.get_origin (out x, out y);
-				current = cur_icon;
+				if (settings.icon_opacity == cur_icon.opacity)
+					Utils.icon_fade (cur_icon);
+				cur_icon.set_scale (settings.active_element_scale, settings.active_element_scale);
 			}
-
-			if (current == null)
-				return;
-
-			if (settings.icon_opacity == current.opacity)
-				icon_fade (current);
 
 			if (initial) {
 				indicator.visible = true;
@@ -516,44 +525,10 @@ namespace Gala.Plugins.ElementaryAltTab
 			//collect_windows ();
 		}
 
-		private void icon_fade (Actor act, bool _in=true)
-		{
-			if (act == null)
-				return;
-			if (_in){
-				act.save_easing_state ();
-				act.set_easing_duration (200);
-				act.opacity = 255;
-				act.restore_easing_state ();
-			} else {
-				act.save_easing_state ();
-				act.set_easing_duration (200);
-				act.opacity = Settings.get_default ().icon_opacity;
-				act.restore_easing_state ();
-			}
-		}
-
-		/*
-		*	copied from deepin utils
-		*/
-		public static void show_desktop (Meta.Workspace workspace)
-		{
-			// FIXME: this is a temporary solution, should send _NET_SHOWING_DESKTOP instead, but
-			// mutter could not dispatch it correctly for issue
-
-			var screen = workspace.get_screen ();
-			var display = screen.get_display ();
-			var windows = display.get_tab_list (Meta.TabList.NORMAL, workspace);
-
-			foreach (var w in windows) {
-				w.minimize ();
-			}
-		}
-
 		void key_focus_out ()
 		{
 			if (opened) {
-				//FIXME: problem if layout swicher across witch window switcher shorcut
+				//FIXME: problem if layout swicher across witch window switcher shortcut
 				close_switcher (wm.get_screen ().get_display ().get_current_time ());
 			}
 		}
@@ -576,12 +551,13 @@ namespace Gala.Plugins.ElementaryAltTab
 						return true;
 					cur_desktop = selected_desktop;
 					if (settings.animate) {
-						//FIXME
+						Actor cur_actor;
 						if (cur_icon != null)
-							icon_fade (cur_icon, false);
-
-						if (cur_wpa != null)
-							icon_fade (cur_wpa, false);
+							cur_actor = cur_icon;
+						else
+							cur_actor = cur_wpa;
+						Utils.icon_fade (cur_actor, false);
+						cur_actor.set_scale (settings.inactive_element_scale, settings.inactive_element_scale);
 					}
 					update_indicator_position ();
 					return true;
@@ -603,13 +579,17 @@ namespace Gala.Plugins.ElementaryAltTab
 
 				if (cur_wpa != selected || cur_desktop != null) {
 					if (cur_desktop != null) {
-						if (settings.animate)
-							icon_fade (cur_desktop, false);
+						if (settings.animate) {
+							Utils.icon_fade (cur_desktop, false);
+							cur_desktop.set_scale (settings.inactive_element_scale, settings.inactive_element_scale);
+						}
 						cur_desktop = null;
 					}
 
-					if (settings.animate)
-						icon_fade (cur_wpa, false);
+					if (settings.animate) {
+						Utils.icon_fade (cur_wpa, false);
+						cur_wpa.set_scale (settings.inactive_element_scale, settings.inactive_element_scale);
+					}
 					cur_wpa = selected;
 					update_indicator_position ();
 				}
@@ -620,13 +600,17 @@ namespace Gala.Plugins.ElementaryAltTab
 
 				if (cur_icon != selected || cur_desktop != null) {
 					if (cur_desktop != null) {
-						if (settings.animate)
-							icon_fade (cur_desktop, false);
+						if (settings.animate) {
+							Utils.icon_fade (cur_desktop, false);
+							cur_desktop.set_scale (settings.inactive_element_scale, settings.inactive_element_scale);
+						}
 						cur_desktop = null;
 					}
 
-					if (settings.animate)
-						icon_fade (cur_icon, false);
+					if (settings.animate) {
+						Utils.icon_fade (cur_icon, false);
+						cur_icon.set_scale (settings.inactive_element_scale, settings.inactive_element_scale);
+					}
 					cur_icon = selected;
 					update_indicator_position ();
 				}
