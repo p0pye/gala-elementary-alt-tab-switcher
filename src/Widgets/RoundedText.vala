@@ -63,7 +63,7 @@ namespace Gala.Plugins.ElementaryAltTab
 
         public void set_text (string value)
         {
-            this.text.text = value;
+            this.text.text = "%s".printf(value); // printf avoids a crash when value contains a non ASCII char.
             this.autosize ();
         }
     }
