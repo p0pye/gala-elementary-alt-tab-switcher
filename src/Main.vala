@@ -314,7 +314,7 @@ namespace Gala.Plugins.ElementaryAltTab
 
 			// if we did not have the grab before the key was released, close immediately
 			if ((get_current_modifiers () & modifier_mask) == 0)
-				close_switcher (screen.get_display ().get_current_time ());
+				close_switcher (get_timestamp());
 		}
 
 		void close_switcher (uint32 time)
@@ -420,7 +420,9 @@ namespace Gala.Plugins.ElementaryAltTab
 			} else if (current_window != null) {
 				ulong xid = (ulong) current_window.get_xwindow ();
 				var wnck_current_window = Wnck.Window.get (xid);
-				current_caption = wnck_current_window.get_name ();
+				if(wnck_current_window != null){
+					current_caption = wnck_current_window.get_name ();
+				} // else it will stay "n/a"
 			}
 
 			if (initial) {
@@ -521,7 +523,7 @@ namespace Gala.Plugins.ElementaryAltTab
 			if (current_window == null)
 				return;
 			var screen = current_window.get_screen ();
-			current_window.@delete (screen.get_display ().get_current_time ());
+			current_window.@delete (get_timestamp());
 			//collect_windows ();
 		}
 
@@ -529,7 +531,7 @@ namespace Gala.Plugins.ElementaryAltTab
 		{
 			if (opened) {
 				//FIXME: problem if layout swicher across witch window switcher shortcut
-				close_switcher (wm.get_screen ().get_display ().get_current_time ());
+				close_switcher (get_timestamp());
 			}
 		}
 
@@ -667,6 +669,11 @@ namespace Gala.Plugins.ElementaryAltTab
 
 			return !(name == "switch-applications" || name == "switch-applications-backward"
 				|| name == "switch-windows" || name == "switch-windows-backward");
+		}
+
+		private uint32 get_timestamp(){
+			var screen = wm.get_screen ();
+			return screen.get_display ().get_current_time ();
 		}
 	}
 }
